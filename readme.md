@@ -7,6 +7,8 @@ This package simulates creating a PHP Model class from a csv file (hard coded PH
 ### Create new symfony application
 ``$ docker exec -it demo_php bash``
 
+### Install dependencies 
+``$ composer install``
 #### Run test
 ``$ php ./vendor/bin/phpunit``
 
