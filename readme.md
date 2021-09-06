@@ -1,3 +1,6 @@
+## PHP Class generator from Array
+This package simulates creating a PHP Model class from a csv file (hard coded PHP array)
+
 ### Install 
 ``$ cd .docker && docker-compose up --build -d ``
 
