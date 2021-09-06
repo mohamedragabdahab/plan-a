@@ -1,0 +1,14 @@
+services:
+  App\Service\ClassTemplateService:
+    class: App\Service\ClassTemplateService
+
+  App\Service\ClassDataBuilderService:
+    class: App\Service\ClassDataBuilderService
+
+  App\Service\ClassValidatorService:
+    class: App\Service\ClassValidatorService
+
+  App\Service\ClassGeneratorService:
+    class: App\Service\ClassGeneratorService
+    arguments: [ 'App\Service\ClassValidatorService', 'App\Service\ClassDataBuilderService', 'App\Service\ClassTemplateService', '@filesystem' ]
+
