@@ -6,12 +6,30 @@ use App\Service\ClassDataBuilderService;
 use App\Service\ClassGeneratorService;
 use App\Service\ClassTemplateService;
 use App\Service\ClassValidatorService;
+use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
 
 class ClassGeneratorServiceTest extends TestCase
 {
-    public function testSomething(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $structure = [
+            'Model' => [
+                'IndirectEmissionsOwned' => [
+                    'Electricity' => [
+                        'MeetingRooms.php'
+                    ]
+                ]
+            ]
+        ];
+
+        vfsStream::setup('root', null, $structure);
+    }
+
+    public function test_generate_from_array(): void
     {
         $classValidatorService = $this->createMock(ClassValidatorService::class);
         $classValidatorService->expects($this->once())
@@ -25,7 +43,7 @@ class ClassGeneratorServiceTest extends TestCase
             ->willReturn([
                 'class_file' => [
                     'file_name' => 'MeetingRooms.php',
-                    'file_path' => 'Model/IndirectEmissionsOwned/Electricity',
+                    'file_path' => vfsStream::url('root/Model/IndirectEmissionsOwned/Electricity'),
                 ],
                 'class_body' => [
                     'namespace' => 'App\Model\IndirectEmissionsOwned\Electricity',
@@ -43,7 +61,48 @@ class ClassGeneratorServiceTest extends TestCase
                 'table_name' => 'meeting-rooms',
             ])
             ->willReturn(
-                <<<PHP
+                $this->getExpectedClassFileContent()
+            );
+
+        $filesystem = $this->createMock(Filesystem::class);
+        $filesystem->expects($this->once())
+            ->method('exists')
+            ->willReturn(false);
+
+        $filesystem->expects($this->once())
+            ->method('mkdir');
+
+        $classGeneratorService = new ClassGeneratorService(
+            $classValidatorService,
+            $classDataBuilderService,
+            $classTemplateService,
+            $filesystem
+        );
+
+        $classGeneratorService->generateFromArray($this->getClassData());
+
+        $this->assertFileExists(vfsStream::url('root/Model/IndirectEmissionsOwned/Electricity'));
+
+        $fileContents = file_get_contents(vfsStream::url('root/Model/IndirectEmissionsOwned/Electricity/MeetingRooms.php'));
+
+        $this->assertSame($fileContents, $this->getExpectedClassFileContent());
+
+    }
+
+    private function getClassData(): array
+    {
+        return [
+            'scope' => [
+                'indirect-emissions-owned',
+                'electricity',
+            ],
+            'name' => 'meeting-rooms',
+        ];
+    }
+
+    private function getExpectedClassFileContent(): string
+    {
+        return <<<PHP
             <?php
             namespace App\Model\IndirectEmissionsOwned\Electricity;
             
@@ -58,39 +117,6 @@ class ClassGeneratorServiceTest extends TestCase
                     return self::TABLE_NAME;
                 }
             }
-            PHP
-            );
-
-        $filesystem = $this->createMock(Filesystem::class);
-        $filesystem->expects($this->once())
-            ->method('exists')
-            ->willReturn(true);
-
-        $filesystem->expects($this->once())
-            ->method('mkdir')
-            ->with('Model/IndirectEmissionsOwned/Electricity');
-
-
-        $classGeneratorService = new ClassGeneratorService(
-            $classValidatorService,
-            $classDataBuilderService,
-            $classTemplateService,
-            $filesystem
-        );
-
-        $classGeneratorService->generateFromArray($this->getClassData());
-
-        $this->assertFileExists('Model/IndirectEmissionsOwned/Electricity/MeetingRooms.php');
-    }
-
-    private function getClassData(): array
-    {
-        return [
-            'scope' => [
-                'indirect-emissions-owned',
-                'electricity',
-            ],
-            'name' => 'meeting-rooms',
-        ];
+            PHP;
     }
 }
